@@ -20,4 +20,7 @@ func main() {
 		fmt.Println("rikishi: %s\n", r)
 
 	}
+
+	r, _, err := client.Rikishi.Get(ctx, 8890)
+	fmt.Printf("r = %s\n", r)
 }
