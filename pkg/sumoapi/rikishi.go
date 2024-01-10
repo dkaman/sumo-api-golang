@@ -16,9 +16,9 @@ type Rikishi struct {
 	Heya        string    `json:"heya,omitempty"`
 	BirthDate   time.Time `json:"birthDate,omitempty"`
 	Shusshin    string    `json:"shusshin,omitempty"`
-	Height      int       `json:"height,omitempty"`
-	Weight      int       `json:"weight,omitempty"`
-	Debut       time.Time `json:"debut,omitempty"`
+	Height      float64   `json:"height,omitempty"`
+	Weight      float64   `json:"weight,omitempty"`
+	Debut       string    `json:"debut,omitempty"`
 	UpdatedAt   time.Time `json:"updatedAt,omitempty"`
 }
 
