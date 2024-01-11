@@ -2,6 +2,7 @@ package sumoapi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -76,13 +77,21 @@ func (r *RikishiService) List(ctx context.Context) ([]*Rikishi, *http.Response, 
 		return nil, nil, err
 	}
 
-	var apiResponse RikishiResponse
+	var apiResponse apiBulkResponse
+
 	resp, err := r.client.Do(ctx, req, &apiResponse)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return apiResponse.Records, resp, nil
+	var rikishi []*Rikishi
+
+	err = json.Unmarshal(apiResponse.Records, &rikishi)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return rikishi, resp, nil
 }
 
 func (r *RikishiService) Get(ctx context.Context, id int) (*Rikishi, *http.Response, error) {
@@ -94,10 +103,74 @@ func (r *RikishiService) Get(ctx context.Context, id int) (*Rikishi, *http.Respo
 	}
 
 	var rikishi Rikishi
+
 	resp, err := r.client.Do(ctx, req, &rikishi)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return &rikishi, resp, nil
+}
+
+func (r *RikishiService) Stats(ctx context.Context, id int) (*RikishiGlobalStats, *http.Response, error) {
+	u := fmt.Sprintf("api/rikishi/%d/stats", id)
+
+	req, err := r.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var gs RikishiGlobalStats
+
+	resp, err := r.client.Do(ctx, req, &gs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &gs, resp, nil
+}
+
+func (r *RikishiService) Matches(ctx context.Context, id int) ([]*Match, *http.Response, error) {
+	u := fmt.Sprintf("api/rikishi/%d/matches", id)
+
+	req, err := r.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var apiResponse apiBulkResponse
+
+	resp, err := r.client.Do(ctx, req, &apiResponse)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var matches []*Match
+
+	err = json.Unmarshal(apiResponse.Records, &matches)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return matches, resp, nil
+}
+
+func (r *RikishiService) Matchup(ctx context.Context, subjectID int, opponentID int) (*MatchupStatistics, *http.Response, error) {
+	u := fmt.Sprintf("api/rikishi/%d/matches/%d", subjectID, opponentID)
+
+	req, err := r.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var matchup MatchupStatistics
+
+	resp, err := r.client.Do(ctx, req, &matchup)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	matchup.RikishiID = subjectID
+
+	return &matchup, resp, nil
 }

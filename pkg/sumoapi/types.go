@@ -16,12 +16,11 @@ const (
 )
 
 type Client struct {
-	client *http.Client
-
-	common service
-
+	client    *http.Client
 	BaseURL   *url.URL
 	UserAgent string
+
+	common service
 
 	Basho    *BashoService
 	Kimarite *KimariteService
