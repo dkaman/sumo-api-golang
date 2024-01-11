@@ -32,6 +32,13 @@ type service struct {
 	client *Client
 }
 
+type apiBulkResponse struct {
+	Limit   int             `json:"limit,omitempty"`
+	Skip    int             `json:"skip,omitempty"`
+	Total   int             `json:"total,omitempty"`
+	Records json.RawMessage `json:"records,omitempty"`
+}
+
 func NewClient(httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{}

@@ -68,13 +68,6 @@ type MatchupStatistics struct {
 	Total          int            `json:"total,omitempty"`
 }
 
-type RikishiResponse struct {
-	Limit   int        `json:"limit,omitempty"`
-	Skip    int        `json:"skip,omitempty"`
-	Total   int        `json:"total,omitempty"`
-	Records []*Rikishi `json:"records,omitempty"`
-}
-
 func (r *RikishiService) List(ctx context.Context) ([]*Rikishi, *http.Response, error) {
 	u := "api/rikishis"
 
