@@ -1,10 +1,10 @@
-package sumoapi
+package sumo
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -17,12 +17,12 @@ type Rikishi struct {
 	Name        string    `json:"shikonaEn,omitempty"`
 	CurrentRank string    `json:"currentRank,omitempty"`
 	Heya        string    `json:"heya,omitempty"`
-	BirthDate   time.Time `json:"birthDate,omitempty"`
+	BirthDate   time.Time `json:"birthDate"`
 	Shusshin    string    `json:"shusshin,omitempty"`
 	Height      float64   `json:"height,omitempty"`
 	Weight      float64   `json:"weight,omitempty"`
 	Debut       string    `json:"debut,omitempty"`
-	UpdatedAt   time.Time `json:"updatedAt,omitempty"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 	// Shikona     []byte    `json:"shikonaJp,omitempty"`
 }
 
@@ -69,108 +69,119 @@ type MatchupStatistics struct {
 	Total          int            `json:"total,omitempty"`
 }
 
-func (r *RikishiService) List(ctx context.Context) ([]*Rikishi, *http.Response, error) {
-	u := "api/rikishis"
+func (s *RikishiService) List(ctx context.Context) ([]*Rikishi, error) {
+	p := s.ListPager(ctx, 100)
 
-	req, err := r.client.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, nil, err
+	var out []*Rikishi
+
+	for {
+		page, err := p.NextPage()
+		if errors.Is(err, PagerDone) {
+			break
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, page...)
 	}
 
-	var apiResponse apiBulkResponse
-
-	resp, err := r.client.Do(ctx, req, &apiResponse)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var rikishi []*Rikishi
-
-	err = json.Unmarshal(apiResponse.Records, &rikishi)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return rikishi, resp, nil
+	return out, nil
 }
 
-func (r *RikishiService) Get(ctx context.Context, id int) (*Rikishi, *http.Response, error) {
+func (s *RikishiService) ListPager(ctx context.Context, pageSize int) *Pager[*Rikishi] {
+	return newPager[*Rikishi](ctx, s.client, "GET", "api/rikishis", url.Values{}, pageSize)
+}
+
+func (s *RikishiService) Get(ctx context.Context, id int) (*Rikishi, error) {
 	u := fmt.Sprintf("api/rikishi/%d", id)
 
-	req, err := r.client.NewRequest("GET", u, nil)
+	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var rikishi Rikishi
 
-	resp, err := r.client.Do(ctx, req, &rikishi)
+	resp, err := s.client.Do(ctx, req, &rikishi)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return &rikishi, resp, nil
+	if resp.StatusCode < 200 || resp.StatusCode >= 300  {
+		return nil, fmt.Errorf("received non-200 status code from server: %d", resp.StatusCode)
+	}
+
+	return &rikishi, nil
 }
 
-func (r *RikishiService) Stats(ctx context.Context, id int) (*RikishiGlobalStats, *http.Response, error) {
+func (s *RikishiService) Stats(ctx context.Context, id int) (*RikishiGlobalStats, error) {
 	u := fmt.Sprintf("api/rikishi/%d/stats", id)
 
-	req, err := r.client.NewRequest("GET", u, nil)
+	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var gs RikishiGlobalStats
 
-	resp, err := r.client.Do(ctx, req, &gs)
+	resp, err := s.client.Do(ctx, req, &gs)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return &gs, resp, nil
+	if resp.StatusCode < 200 || resp.StatusCode >= 300  {
+		return nil, fmt.Errorf("received non-200 status code from server: %d", resp.StatusCode)
+	}
+
+	return &gs, nil
 }
 
-func (r *RikishiService) Matches(ctx context.Context, id int) ([]*Match, *http.Response, error) {
-	u := fmt.Sprintf("api/rikishi/%d/matches", id)
+func (s *RikishiService) Matches(ctx context.Context, id int) ([]*Match, error) {
+	p := s.MatchesPager(ctx, id, 100)
 
-	req, err := r.client.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, nil, err
+	var out []*Match
+
+	for {
+		page, err := p.NextPage()
+		if errors.Is(err, PagerDone) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, page...)
 	}
 
-	var apiResponse apiBulkResponse
-
-	resp, err := r.client.Do(ctx, req, &apiResponse)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var matches []*Match
-
-	err = json.Unmarshal(apiResponse.Records, &matches)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return matches, resp, nil
+	return out, nil
 }
 
-func (r *RikishiService) Matchup(ctx context.Context, subjectID int, opponentID int) (*MatchupStatistics, *http.Response, error) {
+func (s *RikishiService) MatchesPager(ctx context.Context, id int, pageSize int) *Pager[*Match] {
+	path := fmt.Sprintf("api/rikishi/%d/matches", id)
+	return newPager[*Match](ctx, s.client, "GET", path, url.Values{}, pageSize)
+}
+
+func (s *RikishiService) Matchup(ctx context.Context, subjectID int, opponentID int) (*MatchupStatistics, error) {
 	u := fmt.Sprintf("api/rikishi/%d/matches/%d", subjectID, opponentID)
 
-	req, err := r.client.NewRequest("GET", u, nil)
+	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var matchup MatchupStatistics
 
-	resp, err := r.client.Do(ctx, req, &matchup)
+	resp, err := s.client.Do(ctx, req, &matchup)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300  {
+		return nil, fmt.Errorf("received non-200 status code from server: %d", resp.StatusCode)
 	}
 
 	matchup.RikishiID = subjectID
 
-	return &matchup, resp, nil
+	return &matchup, nil
 }

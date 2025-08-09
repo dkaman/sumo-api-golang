@@ -1,4 +1,4 @@
-package sumoapi
+package sumo
 
 import (
 	"bytes"
@@ -43,9 +43,7 @@ func NewClient(httpClient *http.Client) *Client {
 		httpClient = &http.Client{}
 	}
 
-	httpClient2 := *httpClient
-
-	c := &Client{client: &httpClient2}
+	c := &Client{client: httpClient}
 
 	c.initialize()
 
@@ -53,10 +51,6 @@ func NewClient(httpClient *http.Client) *Client {
 }
 
 func (c *Client) initialize() {
-	if c.client == nil {
-		c.client = &http.Client{}
-	}
-
 	if c.BaseURL == nil {
 		c.BaseURL, _ = url.Parse(defaultBaseURL)
 	}
@@ -66,15 +60,14 @@ func (c *Client) initialize() {
 	}
 
 	c.common.client = c
+
 	c.Basho = (*BashoService)(&c.common)
 	c.Kimarite = (*KimariteService)(&c.common)
 	c.Rikishi = (*RikishiService)(&c.common)
-
 }
 
-type RequestOption func(req *http.Request)
 
-func (c *Client) NewRequest(method string, urlStr string, body interface{}, opts ...RequestOption) (*http.Request, error) {
+func (c *Client) NewRequest(method string, urlStr string, body any) (*http.Request, error) {
 	u, err := c.BaseURL.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -104,14 +97,10 @@ func (c *Client) NewRequest(method string, urlStr string, body interface{}, opts
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
 
-	for _, opt := range opts {
-		opt(req)
-	}
-
 	return req, nil
 }
 
-func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*http.Response, error) {
+func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Response, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err

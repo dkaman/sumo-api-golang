@@ -1,3 +1,3 @@
-package sumoapi
+package sumo
 
 type KimariteService service
