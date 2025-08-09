@@ -1,4 +1,4 @@
-package sumo-api-golang
+package sumo
 
 import (
 	"bytes"

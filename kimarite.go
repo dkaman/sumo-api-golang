@@ -1,3 +1,3 @@
-package sumo-api-golang
+package sumo
 
 type KimariteService service
